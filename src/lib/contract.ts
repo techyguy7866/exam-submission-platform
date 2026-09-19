@@ -255,6 +255,18 @@ export class AnonymousExamClient {
     return { connected: this.isConnected, address: this.connectedAddress };
   }
 
+  // ── Circuit 1: submitExam (alias: claimWarranty) ──
+  public async submitExam(examId: string): Promise<{
+    txHash: string;
+    commitmentHex: string;
+    daysRequirementMet: boolean;
+    signedBy: string;
+    txFee: string;
+    txFeeAsset: string;
+  }> {
+    return this.claimWarranty(examId);
+  }
+
   // ── Circuit 1: claimWarranty(Bytes<32>) ───────────────────────────────────
   // Proves exam answers submitted + score above threshold without revealing answers or identity.
   public async claimWarranty(expectedProductId: string): Promise<{
@@ -331,6 +343,10 @@ export class AnonymousExamClient {
     return { matches, txHash };
   }
 
+  public async revokeSubmission(commitment: string) {
+    return this.revokeWarranty(commitment);
+  }
+
   // ── Circuit 3: revokeWarranty(Bytes<32>) ──────────────────────────────────
   public async revokeWarranty(commitment: string): Promise<{
     txHash: string;
@@ -343,6 +359,10 @@ export class AnonymousExamClient {
     ]);
     const txHash = deriveCommitment(["aesp:tx:revoke", revokedCommitment]);
     return { txHash, revokedCommitment };
+  }
+
+  public async setExamCommitment(minScore: number) {
+    return this.setManufacturerCommitment(minScore);
   }
 
   // ── Circuit 4: setManufacturerCommitment(Uint<32>) ────────────────────────

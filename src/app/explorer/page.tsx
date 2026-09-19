@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import Link from "next/link";
 import { CONTRACT_ADDRESS, NETWORK_CONFIG } from "../../lib/contract";
 
@@ -21,7 +21,7 @@ export default function ExplorerPage() {
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          <span style={{ padding: "4px 12px", background: "rgba(6,182,212,0.12)", border: "1px solid rgba(6,182,212,0.25)", borderRadius: 50, fontSize: "0.72rem", fontWeight: 700, color: "#22d3ee", letterSpacing: "0.06em", textTransform: "uppercase" }}>Midnight Explorer</span>
+          <span style={{ padding: "4px 12px", background: "rgba(6,182,222,0.12)", border: "1px solid rgba(6,182,222,0.25)", borderRadius: 50, fontSize: "0.72rem", fontWeight: 700, color: "#22d3ee", letterSpacing: "0.06em", textTransform: "uppercase" }}>Midnight Explorer</span>
           <span style={{ padding: "4px 12px", background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 50, fontSize: "0.72rem", fontWeight: 700, color: "#34d399", letterSpacing: "0.06em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 5 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981", display: "inline-block" }} />Preview Network
           </span>
@@ -38,90 +38,91 @@ export default function ExplorerPage() {
         background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.2)",
       }}>
         <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.08em" }}>Contract Address</div>
-        <code style={{ fontSize: "0.85rem", color: "#06b6d4", wordBreak: "break-all", lineHeight: 1.7, display: "block", marginBottom: 16, fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
-          {CONTRACT_ADDRESS}
-        </code>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <a href={explorerUrl} target="_blank" rel="noopener noreferrer" style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            padding: "10px 22px", borderRadius: 50,
-            background: "linear-gradient(135deg,#8b5cf6,#3b82f6)",
-            color: "#fff", fontWeight: 700, fontSize: "0.9rem",
-            boxShadow: "0 4px 16px rgba(139,92,246,0.35)",
-            transition: "opacity 0.15s",
-          }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
-          onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981" }} />
-            View on Midnight Explorer →
-          </a>
-          <button onClick={() => navigator.clipboard?.writeText(CONTRACT_ADDRESS)} style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "10px 18px", borderRadius: 50,
-            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-            color: "#94a3b8", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer",
-          }}>📋 Copy Address</button>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12,
+          padding: "12px 16px", background: "rgba(0,0,0,0.4)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.07)",
+          fontFamily: "'JetBrains Mono','Fira Code',monospace",
+        }}>
+          <span style={{ fontSize: "0.83rem", color: "#e2e8f0", wordBreak: "break-all" }}>{CONTRACT_ADDRESS}</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => navigator.clipboard.writeText(CONTRACT_ADDRESS)}
+              style={{
+                padding: "6px 14px", background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.4)",
+                borderRadius: 8, fontSize: "0.75rem", fontWeight: 600, color: "#a78bfa", cursor: "pointer",
+              }}>
+              Copy
+            </button>
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: "6px 14px", background: "linear-gradient(135deg,#8b5cf6,#3b82f6)", borderRadius: 8,
+                fontSize: "0.75rem", fontWeight: 600, color: "#fff", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4,
+              }}>
+              View in Explorer ↗
+            </a>
+          </div>
         </div>
       </div>
 
-      {/* Network Info */}
+      {/* Network Configuration */}
       <div style={{
         padding: 24, borderRadius: 16, marginBottom: 20,
-        background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+        background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)",
       }}>
-        <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b", marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.08em" }}>Network Configuration</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 14 }}>
+        <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.08em" }}>Network Configuration</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12 }}>
           {[
-            { label: "Network ID",  value: NETWORK_CONFIG.networkId, icon: "🌐" },
-            { label: "Node RPC",    value: NETWORK_CONFIG.nodeUrl,   icon: "🔗" },
-            { label: "Indexer",     value: "indexer.preview.midnight.network", icon: "📡" },
-            { label: "Language",    value: "Compact v0.23",          icon: "⚙️" },
-          ].map(item => (
-            <div key={item.label} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-              <span style={{ fontSize: "1rem", marginTop: 2 }}>{item.icon}</span>
-              <div>
-                <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{item.label}</div>
-                <div style={{ fontSize: "0.8rem", color: "#e2e8f0", fontWeight: 500, marginTop: 2, wordBreak: "break-all", fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>{item.value}</div>
-              </div>
+            { label: "Network ID", val: NETWORK_CONFIG.networkId },
+            { label: "Indexer", val: NETWORK_CONFIG.indexer },
+            { label: "Node RPC", val: NETWORK_CONFIG.node },
+            { label: "Proof Server", val: NETWORK_CONFIG.proofServer },
+          ].map(c => (
+            <div key={c.label} style={{ padding: "10px 14px", background: "rgba(0,0,0,0.3)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div style={{ fontSize: "0.7rem", color: "#64748b", marginBottom: 4 }}>{c.label}</div>
+              <div style={{ fontSize: "0.78rem", color: "#cbd5e1", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.val}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Ledger Fields */}
+      {/* Contract Ledger Fields */}
       <div style={{
-        padding: 24, borderRadius: 16, marginBottom: 24,
-        background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+        padding: 24, borderRadius: 16, marginBottom: 20,
+        background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)",
       }}>
-        <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b", marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.08em" }}>Public Ledger Fields (8)</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          On-Chain Ledger State (8 Fields)
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {ledgerFields.map(f => (
             <div key={f.field} style={{
-              display: "flex", gap: 16, padding: "10px 0",
-              borderBottom: "1px solid rgba(255,255,255,0.05)",
+              display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8,
+              padding: "10px 14px", background: "rgba(0,0,0,0.25)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.04)",
             }}>
-              <code style={{ fontSize: "0.78rem", color: f.color, minWidth: 280, flexShrink: 0, fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>{f.field}</code>
-              <span style={{ fontSize: "0.8rem", color: "#64748b" }}>{f.desc}</span>
+              <span style={{ fontFamily: "monospace", fontSize: "0.82rem", color: f.color, fontWeight: 600 }}>{f.field}</span>
+              <span style={{ fontSize: "0.78rem", color: "#64748b" }}>{f.desc}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Navigation */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <Link href="/" style={{
-          display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "10px 22px", borderRadius: 50,
-          background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-          color: "#94a3b8", fontWeight: 600, fontSize: "0.9rem",
-        }}>← Back to Dashboard</Link>
         <Link href="/claim" style={{
-          display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "10px 22px", borderRadius: 50,
-          background: "linear-gradient(135deg,#8b5cf6,#3b82f6)",
-          color: "#fff", fontWeight: 700, fontSize: "0.9rem",
-          boxShadow: "0 4px 16px rgba(139,92,246,0.35)",
-        }}>✏️ Submit Exam →</Link>
+          padding: "10px 24px", background: "linear-gradient(135deg,#8b5cf6,#3b82f6)", borderRadius: 10,
+          fontWeight: 600, fontSize: "0.88rem", color: "#fff", textDecoration: "none",
+        }}>
+          ✍️ Submit Exam
+        </Link>
+        <Link href="/admin" style={{
+          padding: "10px 24px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: 10, fontWeight: 600, fontSize: "0.88rem", color: "#cbd5e1", textDecoration: "none",
+        }}>
+          🛡️ Invigilator Console
+        </Link>
       </div>
     </div>
   );

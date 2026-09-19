@@ -4,10 +4,10 @@ import { getClient } from "../../lib/contract";
 import Link from "next/link";
 
 export default function ClaimPage() {
-  const [productId, setProductId] = useState("prod_macbook_pro_m3_2026");
-  const [productSecretKey, setProductSecretKey] = useState("");
-  const [purchaseInvoice, setPurchaseInvoice] = useState("");
-  const [submissionScore, setWarrantyDays] = useState(180);
+  const [examId, setExamId] = useState("exam_cs101_cryptography_2026");
+  const [studentSecretKey, setStudentSecretKey] = useState("");
+  const [answersPayload, setAnswersPayload] = useState("");
+  const [submissionScore, setSubmissionScore] = useState(85);
   const [loading, setLoading] = useState(false);
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -25,33 +25,37 @@ export default function ClaimPage() {
     try {
       addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
       const client = getClient();
-      client.setProductSecretKey(productSecretKey || "serial_secret_macbook_pro_2026");
-      client.setPurchaseInvoice(purchaseInvoice || "invoice_receipt_store_09182");
-      client.setWarrantyDays(submissionScore);
+      
+      const effectiveStudentKey = studentSecretKey || "student_zk_key_shuvam_2026";
+      const effectiveAnswers = answersPayload || "answers_section_a_b_c_payload";
 
-      addLog("> [ZK WITNESS] productSecretKey() — private serial key generated locally", "info");
-      addLog("> [ZK WITNESS] warrantyProofNonce() — random entropy salt for replay protection", "info");
-      addLog("> [ZK WITNESS] purchaseInvoiceHash() — SHA-256 hash of receipt & invoice", "info");
-      addLog(`> [ZK WITNESS] submissionScoreRemaining() — ${submissionScore} days balance vs. ${MINIMUM_PASS_SCORE} days requirement`, "info");
-      addLog(`> [ZK THRESHOLD] Asserting submissionScoreRemaining >= minimumRequiredDays privately...`, "info");
+      // Set witnesses using standard setters (backward-compatible with aliases)
+      client.setStudentSecretKey(effectiveStudentKey);
+      client.setAnswersHash(effectiveAnswers);
+      client.setSubmissionScore(submissionScore);
+
+      addLog("> [ZK WITNESS] studentSecretKey() - private student key derived locally (never disclosed)", "info");
+      addLog("> [ZK WITNESS] submissionNonce() - cryptographic replay protection entropy salt", "info");
+      addLog("> [ZK WITNESS] answersHash() - SHA-256 hash of submitted exam answers", "info");
+      addLog(`> [ZK WITNESS] submissionScore() - ${submissionScore} points vs. ${MINIMUM_PASS_SCORE} points passing threshold`, "info");
+      addLog(`> [ZK THRESHOLD] Asserting submissionScore >= minimumPassScore privately in Zero-Knowledge...`, "info");
 
       if (submissionScore < MINIMUM_PASS_SCORE) {
-        addLog(`> [REJECTED] ${submissionScore} active days < ${MINIMUM_PASS_SCORE} days requirement — circuit would reject proof`, "error");
-        setError(`Warranty Expired: ${submissionScore} active days is below the required ${MINIMUM_PASS_SCORE}-day threshold.`);
+        addLog(`> [REJECTED] ${submissionScore} points < ${MINIMUM_PASS_SCORE} passing threshold - circuit would reject proof`, "error");
+        setError(`Submission Rejected: ${submissionScore} points is below the required ${MINIMUM_PASS_SCORE}-point passing threshold.`);
         return;
       }
 
-      addLog("> [CIRCUIT] Executing submitExam(Bytes<32>) on Midnight Network...", "info");
-      const res = await client.submitExam(productId);
+      addLog("> [CIRCUIT] Executing submitExam(Bytes<32>) on Midnight Preview Network...", "info");
+      const res = await client.submitExam(examId);
       setResult(res);
-      addLog(`> [SUCCESS] Warranty claim verified & signed! TxHash: ${res.txHash}`, "success");
-      addLog(`> [COMMITMENT] ZK Warranty Commitment: ${res.commitmentHex}`, "success");
-      addLog(`> [PRIVACY] Product serial number, receipt details, customer identity — NEVER disclosed on-chain`, "success");
+      addLog(`> [SUCCESS] Anonymous exam submission verified & confirmed! TxHash: ${res.txHash}`, "success");
+      addLog(`> [COMMITMENT] ZK Submission Commitment: ${res.commitmentHex}`, "success");
+      addLog(`> [PRIVACY] Student identity, raw answers, exact score - NEVER disclosed on-chain`, "success");
       addLog(`> [FEE] Transaction fee: ${res.txFee} ${res.txFeeAsset}`, "info");
     } catch (err: any) {
-      const msg = err?.message || "Warranty claim failed.";
-      setError(msg);
-      addLog(`> [ERROR] ${msg}`, "error");
+      addLog(`> [ERROR] ${err?.message || err}`, "error");
+      setError(err?.message || "Failed to submit exam proof");
     } finally {
       setLoading(false);
     }
@@ -59,17 +63,13 @@ export default function ClaimPage() {
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!claimedCommitment.trim()) return;
     setVerifyLoading(true); setVerifyResult(null);
     try {
-      addLog("> [CIRCUIT] Executing verifyWarranty(Bytes<32>) on-chain...", "info");
-      const res = await getClient().verifyWarranty(claimedCommitment);
+      const res = await getClient().verifyWarranty(claimedCommitment.trim());
       setVerifyResult(res);
-      addLog(res.matches
-        ? "> [VERIFIED] Commitment matches on-chain record — warranty is VALID"
-        : "> [MISMATCH] Commitment does NOT match — warranty may be invalid or revoked",
-        res.matches ? "success" : "error");
     } catch (err: any) {
-      addLog(`> [ERROR] ${err?.message}`, "error");
+      setError(err?.message || "Verification failed");
     } finally {
       setVerifyLoading(false);
     }
@@ -77,96 +77,85 @@ export default function ClaimPage() {
 
   return (
     <>
-<div style={{ maxWidth: 860, margin: "0 auto", padding: "2rem 1.5rem 4rem" }}>
+      <div style={{ maxWidth: "780px", margin: "0 auto", padding: "2rem 1.5rem 5rem" }}>
+        {/* Page Header */}
         <div style={{ marginBottom: "2rem" }}>
-          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
-            <span className="badge badge-amber">ZK Exam Submission</span>
-            <span className="badge badge-purple">Midnight Preview</span>
-            <span className="badge badge-green">Coverage Assertion</span>
+          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.25rem 0.75rem", borderRadius: "99px", background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.3)" }}>
+              Circuit 1: submitExam(Bytes&lt;32&gt;)
+            </span>
+            <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.25rem 0.75rem", borderRadius: "99px", background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }}>
+              Zero-Knowledge Privacy
+            </span>
           </div>
-          <h1 className="section-title" style={{ fontSize: "1.75rem" }}>Submit Exam Anonymously</h1>
-          <p className="section-desc">
-            Your serial number, store receipt, and customer identity stay fully private. A zero-knowledge proof verifies your remaining exam score meets the required threshold — only a cryptographic commitment is disclosed on-chain.
+          <h1 style={{ fontSize: "2.2rem", fontWeight: 800, color: "#f8fafc", letterSpacing: "-0.03em" }}>
+            Anonymous Exam Submission
+          </h1>
+          <p style={{ color: "#94a3b8", marginTop: "0.5rem", fontSize: "0.95rem", lineHeight: 1.6 }}>
+            Prove exam answers and passing score without revealing your identity or answers.
+            The Compact smart contract verifies your zero-knowledge proof and anchors the cryptographic commitment on-chain.
           </p>
         </div>
 
-        {/* ── ZK Witnesses Card ── */}
-        <div className="glass-card" style={{ padding: "1.25rem", marginBottom: "1.5rem", borderLeft: "3px solid #f59e0b" }}>
-          <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#f59e0b", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            ZK Circuit Architecture — submitExam(Bytes&lt;32&gt;)
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem" }}>
-            {[
-              { label: "productSecretKey()", desc: "Private serial secret key", color: "#e11d48" },
-              { label: "warrantyProofNonce()", desc: "Entropy/replay binding", color: "#f59e0b" },
-              { label: "purchaseInvoiceHash()", desc: "Hashed receipt & invoice", color: "#06b6d4" },
-              { label: "submissionScoreRemaining()", desc: "Private active days ≥ 30", color: "#10b981" },
-            ].map(w => (
-              <div key={w.label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: "8px", padding: "0.75rem", border: `1px solid ${w.color}33` }}>
-                <div style={{ fontFamily: "monospace", fontSize: "0.75rem", color: w.color, marginBottom: "0.25rem" }}>{w.label}</div>
-                <div style={{ fontSize: "0.7rem", color: "#64748b" }}>{w.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Claim Form ── */}
+        {/* Submission Form Card */}
         <div className="glass-card" style={{ padding: "2rem", marginBottom: "1.5rem" }}>
-          <form onSubmit={handleClaim} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          <form onSubmit={handleClaim} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
             <div>
               <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#94a3b8", marginBottom: "0.5rem" }}>
-                Product Model Identifier (Bytes&lt;32&gt;) *
+                Exam Paper ID / Course Identifier (Public Input)
               </label>
-              <input type="text" id="productId" value={productId} onChange={e => setProductId(e.target.value)}
-                placeholder="prod_macbook_pro_m3_2026" required />
-              <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.4rem" }}>Must match active product model ID on Midnight chain</p>
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#94a3b8", marginBottom: "0.5rem" }}>
-                Product Serial Secret Key — Private Witness
-              </label>
-              <input type="password" id="productSecretKey" value={productSecretKey} onChange={e => setProductSecretKey(e.target.value)}
-                placeholder="Your product private serial key (never transmitted)" autoComplete="off" />
+              <input type="text" id="examId" value={examId} onChange={e => setExamId(e.target.value)}
+                placeholder="e.g. exam_cs101_cryptography_2026" required />
               <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.4rem" }}>
-                Calculated locally to generate <code>productSecretKey()</code> ZK witness — never sent over network
+                Identifies which exam offering is being submitted to on the Midnight ledger.
               </p>
             </div>
 
             <div>
               <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#94a3b8", marginBottom: "0.5rem" }}>
-                Active Warranty Coverage Days — Private Threshold Witness
+                Student Secret Key — Private Witness (studentSecretKey)
+              </label>
+              <input type="password" id="studentSecretKey" value={studentSecretKey} onChange={e => setStudentSecretKey(e.target.value)}
+                placeholder="Your private student key (never transmitted to network)" autoComplete="off" />
+              <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.4rem" }}>
+                Calculated locally on your device to generate <code>studentSecretKey()</code> ZK witness — never leaves your browser.
+              </p>
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#94a3b8", marginBottom: "0.5rem" }}>
+                Submission Score — Private Threshold Witness (submissionScore)
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                <input type="range" id="submissionScore" min={0} max={730} step={15} value={submissionScore}
-                  onChange={e => setWarrantyDays(Number(e.target.value))}
+                <input type="range" id="submissionScore" min={0} max={100} step={1} value={submissionScore}
+                  onChange={e => setSubmissionScore(Number(e.target.value))}
                   style={{ flex: 1, accentColor: submissionScore >= MINIMUM_PASS_SCORE ? "#10b981" : "#ef4444" }} />
                 <span style={{
                   fontFamily: "monospace", fontWeight: 700, fontSize: "1rem",
-                  color: submissionScore >= MINIMUM_PASS_SCORE ? "#10b981" : "#ef4444", minWidth: "5rem"
-                }}>{submissionScore} days</span>
+                  color: submissionScore >= MINIMUM_PASS_SCORE ? "#10b981" : "#ef4444", minWidth: "5.5rem"
+                }}>{submissionScore} points</span>
                 <span style={{
                   fontSize: "0.75rem", padding: "0.2rem 0.6rem", borderRadius: "99px",
                   background: submissionScore >= MINIMUM_PASS_SCORE ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
                   color: submissionScore >= MINIMUM_PASS_SCORE ? "#10b981" : "#ef4444"
                 }}>
-                  {submissionScore >= MINIMUM_PASS_SCORE ? "✅ ACTIVE" : "❌ EXPIRED"}
+                  {submissionScore >= MINIMUM_PASS_SCORE ? "✓ PASSING" : "✕ BELOW PASS"}
                 </span>
               </div>
               <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.4rem" }}>
-                Compared privately via <code>submissionScoreRemaining()</code> vs. on-chain <code>minimumRequiredDays</code> (30 days) — balance never disclosed
+                Compared privately via <code>submissionScore()</code> vs. on-chain <code>minimumPassScore</code> ({MINIMUM_PASS_SCORE} points) — exact score never disclosed.
               </p>
             </div>
 
             <div>
               <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#94a3b8", marginBottom: "0.5rem" }}>
-                Purchase Receipt & Invoice Record
+                Exam Answers & Solution Payload (answersHash)
               </label>
-              <textarea id="purchaseInvoice" value={purchaseInvoice} onChange={e => setPurchaseInvoice(e.target.value)}
-                placeholder="Paste store invoice/receipt payload (hashed locally via purchaseInvoiceHash() before ZK proof)"
+              <textarea id="answersPayload" value={answersPayload} onChange={e => setAnswersPayload(e.target.value)}
+                placeholder="Paste exam answers or solution text (hashed locally via SHA-256 before generating ZK proof)..."
                 rows={3} style={{ resize: "vertical" }} />
               <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.4rem" }}>
-                Content is hashed locally — only SHA-256 hash enters <code>purchaseInvoiceHash()</code> ZK proof
+                Content is hashed locally on your device — only the SHA-256 <code>answersHash()</code> enters the zero-knowledge proof.
               </p>
             </div>
 
@@ -179,7 +168,7 @@ export default function ClaimPage() {
           </form>
         </div>
 
-        {/* ── Logs ── */}
+        {/* Activity Logs */}
         {logs.length > 0 && (
           <div className="glass-card" style={{ padding: "1.25rem", marginBottom: "1.5rem" }}>
             <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#64748b", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Activity Log</div>
@@ -189,6 +178,7 @@ export default function ClaimPage() {
           </div>
         )}
 
+        {/* Error Alert */}
         {error && (
           <div className="glass-card fade-in" style={{ padding: "1.5rem", marginBottom: "1.5rem", border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.05)" }}>
             <p style={{ color: "#fca5a5", fontWeight: 600 }}>Error</p>
@@ -196,19 +186,20 @@ export default function ClaimPage() {
           </div>
         )}
 
+        {/* Success Result */}
         {result && (
           <div className="glass-card fade-in" style={{ padding: "1.5rem", marginBottom: "1.5rem", border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.05)" }}>
-            <p style={{ color: "#6ee7b7", fontWeight: 700, fontSize: "1.05rem", marginBottom: "1rem" }}>✅ Exam Submission Verified & Confirmed On-Chain!</p>
+            <p style={{ color: "#6ee7b7", fontWeight: 700, fontSize: "1.05rem", marginBottom: "1rem" }}>✓ Exam Submission Verified & Confirmed On-Chain!</p>
             {[
               { label: "Circuit", value: "submitExam(Bytes<32>)" },
-              { label: "ZK Claim Commitment", value: result.commitmentHex },
+              { label: "ZK Submission Commitment", value: result.commitmentHex },
               { label: "On-Chain TxHash", value: result.txHash },
-              { label: "Days Requirement Met", value: result.daysRequirementMet ? "✅ Satisfied (private)" : "❌ Not Satisfied" },
+              { label: "Passing Score Satisfied", value: result.daysRequirementMet ? "✓ Satisfied (Zero-Knowledge)" : "✕ Below Passing Score" },
               { label: "Signed By", value: result.signedBy },
               { label: "Tx Fee", value: `${result.txFee} ${result.txFeeAsset}` },
             ].map(({ label, value }) => (
               <div key={label} style={{ display: "flex", gap: "1rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
-                <span style={{ fontSize: "0.8rem", color: "#64748b", minWidth: 160 }}>{label}:</span>
+                <span style={{ fontSize: "0.8rem", color: "#64748b", minWidth: 180 }}>{label}:</span>
                 <span style={{ fontSize: "0.8rem", color: "#f1f5f9", fontFamily: "monospace", wordBreak: "break-all" }}>{value as string}</span>
               </div>
             ))}
@@ -216,18 +207,18 @@ export default function ClaimPage() {
           </div>
         )}
 
-        {/* ── Verify Claim Panel ── */}
+        {/* Verify Submission Panel */}
         <div className="glass-card" style={{ padding: "1.5rem", borderLeft: "3px solid #06b6d4" }}>
           <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#06b6d4", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
             Verify Exam Submission — verifyWarranty(Bytes&lt;32&gt;)
           </div>
           <p style={{ fontSize: "0.85rem", color: "#94a3b8", marginBottom: "1rem" }}>
-            Repair centers and customers can publicly verify whether a claimed commitment matches the registered exam submission on-chain.
+            Invigilators, institutions, and candidates can publicly verify whether a claimed ZK commitment matches a confirmed exam submission on-chain without revealing answers or identity.
           </p>
           <form onSubmit={handleVerify} style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
             <input type="text" id="claimedCommitment" value={claimedCommitment}
               onChange={e => setClaimedCommitment(e.target.value)}
-              placeholder="0x... claimed warranty commitment hash"
+              placeholder="0x... claimed exam commitment hash"
               style={{ flex: 1, minWidth: "200px" }} />
             <button type="submit" className="btn-secondary" disabled={verifyLoading} id="verifyBtn" style={{ whiteSpace: "nowrap" }}>
               {verifyLoading ? <><span className="spinner" /> Verifying...</> : "Verify On-Chain"}
@@ -238,7 +229,7 @@ export default function ClaimPage() {
               background: verifyResult.matches ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)",
               border: `1px solid ${verifyResult.matches ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}` }}>
               <p style={{ color: verifyResult.matches ? "#6ee7b7" : "#fca5a5", fontWeight: 700, marginBottom: "0.5rem" }}>
-                {verifyResult.matches ? "✅ VALID — Warranty Commitment Verified On-Chain" : "❌ INVALID — Commitment Mismatch"}
+                {verifyResult.matches ? "✓ VALID — Exam Submission Commitment Verified On-Chain" : "✕ INVALID — Commitment Mismatch"}
               </p>
               <div style={{ fontSize: "0.78rem", color: "#64748b" }}>TxHash: <span style={{ color: "#f1f5f9", fontFamily: "monospace" }}>{verifyResult.txHash}</span></div>
             </div>
@@ -248,4 +239,3 @@ export default function ClaimPage() {
     </>
   );
 }
-

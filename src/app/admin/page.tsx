@@ -4,13 +4,13 @@ import { getClient } from "../../lib/contract";
 import Link from "next/link";
 
 export default function AdminPage() {
-  const [productId, setProductId] = useState("prod_macbook_pro_m3_2027");
-  const [resetMinDays, setResetMinDays] = useState(60);
+  const [examId, setExamId] = useState("exam_cs101_cryptography_2027");
+  const [resetMinScore, setResetMinScore] = useState(50);
   const [loadingReset, setLoadingReset] = useState(false);
 
-  const [manufacturerKey, setManufacturerKey] = useState("");
-  const [mfrMinDays, setMfrMinDays] = useState(30);
-  const [loadingMfr, setLoadingMfr] = useState(false);
+  const [invigilatorKey, setInvigilatorKey] = useState("");
+  const [invigilatorMinScore, setInvigilatorMinScore] = useState(30);
+  const [loadingInvigilator, setLoadingInvigilator] = useState(false);
 
   const [revokeCommitment, setRevokeCommitment] = useState("");
   const [loadingRevoke, setLoadingRevoke] = useState(false);
@@ -21,35 +21,37 @@ export default function AdminPage() {
   const [logs, setLogs] = useState<{ msg: string; type: string }[]>([]);
 
   const addLog = (msg: string, type = "info") => setLogs(l => [...l, { msg, type }]);
-  const isLoading = loadingReset || loadingMfr || loadingRevoke || loadingSession;
+  const isLoading = loadingReset || loadingInvigilator || loadingRevoke || loadingSession;
 
-  const handleSetManufacturer = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoadingMfr(true); setLogs([]); setResult(null);
+  const handleSetInvigilator = async (e: React.FormEvent) => {
+    e.preventDefault(); setLoadingInvigilator(true); setLogs([]); setResult(null);
     try {
       addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
-      addLog("> [ZK WITNESS] manufacturerSigningKey() — derived from private key, never disclosed", "info");
-      addLog(`> [CIRCUIT] Executing setManufacturerCommitment(Uint<32>) — minimumRequiredDays=${mfrMinDays} days...`, "info");
+      addLog("> [ZK WITNESS] invigilatorKey() - derived from private key, never disclosed", "info");
+      addLog(`> [CIRCUIT] Executing setManufacturerCommitment(Uint<32>) - minimumPassScore=${invigilatorMinScore} points...`, "info");
       const client = getClient();
-      client.setManufacturerKey(manufacturerKey || "manufacturer_default_signing_key");
-      const res = await client.setManufacturerCommitment(mfrMinDays);
+      client.setInvigilatorKey(invigilatorKey || "invigilator_default_signing_key_2026");
+      const res = await client.setManufacturerCommitment(invigilatorMinScore);
       setResult({ ...res, circuit: "setManufacturerCommitment(Uint<32>)" });
-      addLog(`> [SUCCESS] Manufacturer commitment anchored on-chain!`, "success");
+      addLog(`> [SUCCESS] Invigilator authority commitment anchored on-chain!`, "success");
       addLog(`> [COMMITMENT] ${res.manufacturerCommitment}`, "success");
-      addLog(`> [THRESHOLD] minimumRequiredDays set to ${res.newMinimumDays} days`, "success");
+      addLog(`> [THRESHOLD] minimumPassScore set to ${res.newMinimumDays} points`, "success");
       addLog(`> [TXHASH] ${res.txHash}`, "success");
     } catch (err: any) { addLog(`> [ERROR] ${err?.message || err}`, "error"); }
-    finally { setLoadingMfr(false); }
+    finally { setLoadingInvigilator(false); }
   };
 
   const handleRevoke = async (e: React.FormEvent) => {
     e.preventDefault(); setLoadingRevoke(true); setLogs([]); setResult(null);
     try {
       addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
-      addLog("> [ZK WITNESS] manufacturerSigningKey() — ZK authorization proof generated locally", "info");
-      addLog(`> [CIRCUIT] Executing revokeWarranty(Bytes<32>) — commitment: ${revokeCommitment.substring(0, 20)}...`, "info");
-      const res = await getClient().revokeWarranty(revokeCommitment);
+      addLog("> [ZK WITNESS] invigilatorKey() - ZK authorization proof generated locally", "info");
+      addLog(`> [CIRCUIT] Executing revokeWarranty(Bytes<32>) - commitment: ${revokeCommitment.substring(0, 20)}...`, "info");
+      const client = getClient();
+      client.setInvigilatorKey(invigilatorKey || "invigilator_default_signing_key_2026");
+      const res = await client.revokeWarranty(revokeCommitment);
       setResult({ ...res, circuit: "revokeWarranty(Bytes<32>)" });
-      addLog(`> [SUCCESS] Warranty commitment revoked on-chain!`, "success");
+      addLog(`> [SUCCESS] Exam submission commitment revoked on-chain!`, "success");
       addLog(`> [REVOKED] ${res.revokedCommitment}`, "success");
       addLog(`> [TXHASH] ${res.txHash}`, "success");
     } catch (err: any) { addLog(`> [ERROR] ${err?.message || err}`, "error"); }
@@ -60,11 +62,11 @@ export default function AdminPage() {
     e.preventDefault(); setLoadingReset(true); setLogs([]); setResult(null);
     try {
       addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
-      addLog(`> [CIRCUIT] Executing resetProduct("${productId}", ${resetMinDays} days)...`, "info");
-      const res = await getClient().resetProduct(productId, resetMinDays);
+      addLog(`> [CIRCUIT] Executing resetProduct(Bytes<32>, Uint<32>) - newExamId: ${examId}, minScore: ${resetMinScore}...`, "info");
+      const res = await getClient().resetProduct(examId, resetMinScore);
       setResult({ ...res, circuit: "resetProduct(Bytes<32>, Uint<32>)" });
-      addLog(`> [SUCCESS] Product model updated! New Product ID: ${res.newProductId}`, "success");
-      addLog(`> [THRESHOLD] minimumRequiredDays updated to ${res.newMinimumDays} days`, "success");
+      addLog(`> [SUCCESS] Exam paper offering & passing threshold updated!`, "success");
+      addLog(`> [EXAM ID] ${res.newProductId}`, "success");
       addLog(`> [TXHASH] ${res.txHash}`, "success");
     } catch (err: any) { addLog(`> [ERROR] ${err?.message || err}`, "error"); }
     finally { setLoadingReset(false); }
@@ -73,95 +75,82 @@ export default function AdminPage() {
   const handleIncrement = async () => {
     setLoadingSession(true); setLogs([]); setResult(null);
     try {
-      addLog("> [WALLET] Connecting to Midnight Lace Wallet...", "info");
-      addLog("> [CIRCUIT] Executing incrementSession() — invalidating stale proofs...", "info");
+      addLog("> [CIRCUIT] Executing incrementSession() on Midnight ledger...", "info");
       const res = await getClient().incrementSession();
       setResult({ ...res, circuit: "incrementSession()" });
-      addLog(`> [SUCCESS] Session incremented! TxHash: ${res.txHash}`, "success");
+      addLog(`> [SUCCESS] Session epoch nonce incremented! Previous proofs invalidated.`, "success");
+      addLog(`> [TXHASH] ${res.txHash}`, "success");
     } catch (err: any) { addLog(`> [ERROR] ${err?.message || err}`, "error"); }
     finally { setLoadingSession(false); }
   };
 
   return (
     <>
-<div style={{ maxWidth: 860, margin: "0 auto", padding: "2rem 1.5rem 4rem" }}>
+      <div style={{ maxWidth: "780px", margin: "0 auto", padding: "2rem 1.5rem 5rem" }}>
         <div style={{ marginBottom: "2rem" }}>
-          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
-            <span className="badge badge-amber">Manufacturer Console</span>
-            <span className="badge badge-purple">Issuer Authority</span>
-            <span className="badge badge-cyan">Midnight Preview</span>
+          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.25rem 0.75rem", borderRadius: "99px", background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.3)" }}>
+              Admin / Invigilator Portal
+            </span>
+            <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.25rem 0.75rem", borderRadius: "99px", background: "rgba(245,158,11,0.15)", color: "#fbbf24", border: "1px solid rgba(245,158,11,0.3)" }}>
+              Governance Circuits
+            </span>
           </div>
-          <h1 className="section-title" style={{ fontSize: "1.75rem" }}>Manufacturer Admin Console</h1>
-          <p className="section-desc">
-            Admin circuits require the manufacturer's private signing key as a ZK witness for authorization. The key is never transmitted — only the derived commitment is verified on-chain.
+          <h1 style={{ fontSize: "2.2rem", fontWeight: 800, color: "#f8fafc", letterSpacing: "-0.03em" }}>
+            Invigilator Console
+          </h1>
+          <p style={{ color: "#94a3b8", marginTop: "0.5rem", fontSize: "0.95rem", lineHeight: 1.6 }}>
+            Execute authorized governance circuits on the Midnight contract: configure passing score thresholds, revoke disqualified submissions, or rotate active exam offerings.
           </p>
         </div>
 
-        {/* ── Circuit Reference ── */}
-        <div className="glass-card" style={{ padding: "1.25rem", marginBottom: "1.5rem", borderLeft: "3px solid #f59e0b" }}>
-          <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#f59e0b", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Manufacturer Admin Circuits</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.5rem" }}>
-            {[
-              { circuit: "setManufacturerCommitment(Uint<32>)", desc: "Anchor manufacturer authority + set required days", color: "#8b5cf6" },
-              { circuit: "revokeWarranty(Bytes<32>)", desc: "Revoke a fraudulent exam submission (ZK auth)", color: "#ef4444" },
-              { circuit: "resetProduct(Bytes<32>, Uint<32>)", desc: "Reset product ID + minimum days threshold", color: "#f59e0b" },
-              { circuit: "incrementSession()", desc: "Bump session nonce (replay protection)", color: "#06b6d4" },
-            ].map(c => (
-              <div key={c.circuit} style={{ background: "rgba(255,255,255,0.03)", borderRadius: "8px", padding: "0.75rem", border: `1px solid ${c.color}33` }}>
-                <div style={{ fontFamily: "monospace", fontSize: "0.72rem", color: c.color, marginBottom: "0.25rem" }}>{c.circuit}</div>
-                <div style={{ fontSize: "0.68rem", color: "#64748b" }}>{c.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Panel 1: Set Manufacturer Commitment ── */}
+        {/* Panel 1: Set Invigilator Commitment */}
         <div className="glass-card" style={{ padding: "1.75rem", marginBottom: "1.25rem", borderLeft: "3px solid #8b5cf6" }}>
           <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#8b5cf6", marginBottom: "1rem" }}>
-            🔑 Panel 1 — setManufacturerCommitment(Uint&lt;32&gt;)
+            ⚡ Panel 1 — setManufacturerCommitment(Uint&lt;32&gt;)
           </div>
           <p style={{ fontSize: "0.83rem", color: "#94a3b8", marginBottom: "1rem" }}>
-            Anchors the manufacturer's public commitment on-chain and sets the minimum active submission score requirement for valid claims.
+            Anchors the invigilator's public authority commitment on-chain and sets the minimum passing score required for valid submissions.
           </p>
-          <form onSubmit={handleSetManufacturer} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <form onSubmit={handleSetInvigilator} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div>
               <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#94a3b8", display: "block", marginBottom: "0.4rem" }}>
-                Manufacturer Private Signing Key (ZK Witness — manufacturerSigningKey())
+                Invigilator Private Signing Key (ZK Witness — invigilatorKey())
               </label>
-              <input type="password" id="manufacturerKey" value={manufacturerKey} onChange={e => setManufacturerKey(e.target.value)}
-                placeholder="Manufacturer private signing key (never transmitted)" autoComplete="off" />
+              <input type="password" id="invigilatorKey" value={invigilatorKey} onChange={e => setInvigilatorKey(e.target.value)}
+                placeholder="Invigilator private signing key (never transmitted)" autoComplete="off" />
             </div>
             <div>
               <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#94a3b8", display: "block", marginBottom: "0.4rem" }}>
-                Minimum Required Active Warranty Days: <span style={{ color: "#8b5cf6" }}>{mfrMinDays} days</span>
+                Minimum Required Passing Score: <span style={{ color: "#8b5cf6" }}>{invigilatorMinScore} points</span>
               </label>
-              <input type="range" min={0} max={365} step={5} value={mfrMinDays}
-                onChange={e => setMfrMinDays(Number(e.target.value))}
+              <input type="range" min={0} max={100} step={5} value={invigilatorMinScore}
+                onChange={e => setInvigilatorMinScore(Number(e.target.value))}
                 style={{ width: "100%", accentColor: "#8b5cf6" }} />
             </div>
             <button type="submit" className="btn-primary" disabled={isLoading} id="setMfrBtn"
               style={{ background: "rgba(139,92,246,0.2)", borderColor: "rgba(139,92,246,0.5)" }}>
-              {loadingMfr ? <><span className="spinner" /> Anchoring...</> : "Set Manufacturer Commitment (ZK)"}
+              {loadingInvigilator ? <><span className="spinner" /> Anchoring...</> : "Set Invigilator Authority & Threshold (ZK)"}
             </button>
           </form>
         </div>
 
-        {/* ── Panel 2: Revoke Warranty ── */}
+        {/* Panel 2: Revoke Submission */}
         <div className="glass-card" style={{ padding: "1.75rem", marginBottom: "1.25rem", borderLeft: "3px solid #ef4444" }}>
           <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#ef4444", marginBottom: "1rem" }}>
-            🚫 Panel 2 — revokeWarranty(Bytes&lt;32&gt;)
+            ⚡ Panel 2 — revokeWarranty(Bytes&lt;32&gt;)
           </div>
           <p style={{ fontSize: "0.83rem", color: "#94a3b8", marginBottom: "1rem" }}>
-            Revoke or void a specific fraudulent warranty commitment. Requires manufacturer authority proof via <code>manufacturerSigningKey()</code> ZK witness. Stored in <code>lastRevokedCommitment</code>.
+            Revoke or void an invalid or disqualified exam submission commitment. Requires invigilator authority proof via <code>invigilatorKey()</code> ZK witness. Stored in <code>lastRevokedCommitment</code>.
           </p>
           <form onSubmit={handleRevoke} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div>
               <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#94a3b8", display: "block", marginBottom: "0.4rem" }}>
-                Warranty Commitment Hash to Revoke (Bytes&lt;32&gt;)
+                Exam Commitment Hash to Revoke (Bytes&lt;32&gt;)
               </label>
               <input type="text" id="revokeCommitment" value={revokeCommitment}
                 onChange={e => setRevokeCommitment(e.target.value)}
-                placeholder="0x... warranty commitment hash to revoke" required />
+                placeholder="0x... exam submission commitment hash to revoke" required />
             </div>
             <button type="submit" className="btn-primary" disabled={isLoading || !revokeCommitment} id="revokeBtn"
               style={{ background: "rgba(239,68,68,0.15)", borderColor: "rgba(239,68,68,0.4)" }}>
@@ -170,47 +159,47 @@ export default function AdminPage() {
           </form>
         </div>
 
-        {/* ── Panel 3: Reset Product ── */}
+        {/* Panel 3: Reset Exam Offering */}
         <div className="glass-card" style={{ padding: "1.75rem", marginBottom: "1.25rem", borderLeft: "3px solid #f59e0b" }}>
           <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#f59e0b", marginBottom: "1rem" }}>
-            🔄 Panel 3 — resetProduct(Bytes&lt;32&gt;, Uint&lt;32&gt;)
+            ⚡ Panel 3 — resetProduct(Bytes&lt;32&gt;, Uint&lt;32&gt;)
           </div>
           <p style={{ fontSize: "0.83rem", color: "#94a3b8", marginBottom: "1rem" }}>
-            Update the active product model ID and adjust minimum active submission score requirement for new model releases.
+            Update the active exam offering ID and adjust the minimum passing score requirement for new examination periods.
           </p>
           <form onSubmit={handleReset} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div>
               <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#94a3b8", display: "block", marginBottom: "0.4rem" }}>
-                New Product Model ID (Bytes&lt;32&gt;)
+                New Exam Offering Identifier (Bytes&lt;32&gt;)
               </label>
-              <input type="text" id="newProductId" value={productId} onChange={e => setProductId(e.target.value)}
-                placeholder="prod_macbook_pro_m3_2027" />
+              <input type="text" id="newExamId" value={examId} onChange={e => setExamId(e.target.value)}
+                placeholder="exam_cs101_cryptography_2027" />
             </div>
             <div>
               <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#94a3b8", display: "block", marginBottom: "0.4rem" }}>
-                New Minimum Active Days Threshold: <span style={{ color: "#f59e0b" }}>{resetMinDays} days</span>
+                New Passing Score Threshold: <span style={{ color: "#f59e0b" }}>{resetMinScore} points</span>
               </label>
-              <input type="range" min={0} max={365} step={5} value={resetMinDays}
-                onChange={e => setResetMinDays(Number(e.target.value))}
+              <input type="range" min={0} max={100} step={5} value={resetMinScore}
+                onChange={e => setResetMinScore(Number(e.target.value))}
                 style={{ width: "100%", accentColor: "#f59e0b" }} />
             </div>
             <button type="submit" className="btn-primary" disabled={isLoading} id="resetBtn"
               style={{ background: "rgba(245,158,11,0.15)", borderColor: "rgba(245,158,11,0.4)" }}>
-              {loadingReset ? <><span className="spinner" /> Resetting...</> : "Reset Product & Threshold"}
+              {loadingReset ? <><span className="spinner" /> Updating...</> : "Update Exam Offering & Threshold"}
             </button>
           </form>
         </div>
 
-        {/* ── Panel 4: Increment Session ── */}
+        {/* Panel 4: Increment Session Nonce */}
         <div className="glass-card" style={{ padding: "1.5rem", marginBottom: "1.25rem", borderLeft: "3px solid #06b6d4" }}>
           <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#06b6d4", marginBottom: "0.75rem" }}>
-            🔒 Panel 4 — incrementSession()
+            ⚡ Panel 4 — incrementSession()
           </div>
           <p style={{ fontSize: "0.83rem", color: "#94a3b8", marginBottom: "1rem" }}>
-            Bumps the <code>activeSession</code> nonce to invalidate stale proofs from previous epochs.
+            Bumps the <code>activeSession</code> nonce on the Midnight ledger to invalidate stale proofs from previous exam periods.
           </p>
           <button onClick={handleIncrement} className="btn-secondary" disabled={isLoading} id="sessionBtn">
-            {loadingSession ? <><span className="spinner" /> Bumping Session...</> : "Increment Session Nonce"}
+            {loadingSession ? <><span className="spinner" /> Bumping Session...</> : "Increment Session Epoch Nonce"}
           </button>
         </div>
 
@@ -225,7 +214,7 @@ export default function AdminPage() {
 
         {result && (
           <div className="glass-card fade-in" style={{ padding: "1.5rem", border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.05)" }}>
-            <p style={{ color: "#6ee7b7", fontWeight: 700, fontSize: "1.05rem", marginBottom: "1rem" }}>✅ Transaction Confirmed</p>
+            <p style={{ color: "#6ee7b7", fontWeight: 700, fontSize: "1.05rem", marginBottom: "1rem" }}>✓ Transaction Confirmed On-Chain</p>
             {Object.entries(result).map(([k, v]) => v !== undefined && (
               <div key={k} style={{ display: "flex", gap: "1rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "0.8rem", color: "#64748b", minWidth: 160 }}>{k}:</span>
@@ -242,4 +231,3 @@ export default function AdminPage() {
     </>
   );
 }
-
