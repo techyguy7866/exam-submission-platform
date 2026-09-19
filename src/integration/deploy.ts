@@ -20,7 +20,7 @@ const CONTRACT_ADDRESS =
 
 async function main() {
   console.log("=============================================================");
-  console.log(" Confidential Product Warranty Verification (CPWV)");
+  console.log(" ZKExam — Confidential Exam Submission (CPWV)");
   console.log(" Midnight.js Deployment — Preview Testnet");
   console.log("=============================================================");
 

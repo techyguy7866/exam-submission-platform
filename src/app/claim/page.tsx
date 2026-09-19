@@ -80,11 +80,11 @@ export default function ClaimPage() {
 <div style={{ maxWidth: 860, margin: "0 auto", padding: "2rem 1.5rem 4rem" }}>
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
-            <span className="badge badge-amber">ZK Warranty Claim</span>
+            <span className="badge badge-amber">ZK Exam Submission</span>
             <span className="badge badge-purple">Midnight Preview</span>
             <span className="badge badge-green">Coverage Assertion</span>
           </div>
-          <h1 className="section-title" style={{ fontSize: "1.75rem" }}>File Warranty Claim Anonymously</h1>
+          <h1 className="section-title" style={{ fontSize: "1.75rem" }}>Submit Exam Anonymously</h1>
           <p className="section-desc">
             Your serial number, store receipt, and customer identity stay fully private. A zero-knowledge proof verifies your remaining warranty coverage meets the required threshold — only a cryptographic commitment is disclosed on-chain.
           </p>
@@ -172,7 +172,7 @@ export default function ClaimPage() {
 
             <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
               <button type="submit" className="btn-primary" disabled={loading} id="claimBtn">
-                {loading ? <><span className="spinner" /> Generating ZK Proof...</> : "File Warranty Claim (ZK Proof)"}
+                {loading ? <><span className="spinner" /> Generating ZK Proof...</> : "Submit Exam (ZK Proof)"}
               </button>
               <Link href="/" className="btn-secondary">Back to Dashboard</Link>
             </div>
@@ -198,7 +198,7 @@ export default function ClaimPage() {
 
         {result && (
           <div className="glass-card fade-in" style={{ padding: "1.5rem", marginBottom: "1.5rem", border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.05)" }}>
-            <p style={{ color: "#6ee7b7", fontWeight: 700, fontSize: "1.05rem", marginBottom: "1rem" }}>✅ Warranty Claim Verified & Confirmed On-Chain!</p>
+            <p style={{ color: "#6ee7b7", fontWeight: 700, fontSize: "1.05rem", marginBottom: "1rem" }}>✅ Exam Submission Verified & Confirmed On-Chain!</p>
             {[
               { label: "Circuit", value: "claimWarranty(Bytes<32>)" },
               { label: "ZK Claim Commitment", value: result.commitmentHex },
@@ -219,10 +219,10 @@ export default function ClaimPage() {
         {/* ── Verify Claim Panel ── */}
         <div className="glass-card" style={{ padding: "1.5rem", borderLeft: "3px solid #06b6d4" }}>
           <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#06b6d4", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            Verify Warranty Claim — verifyWarranty(Bytes&lt;32&gt;)
+            Verify Exam Submission — verifyWarranty(Bytes&lt;32&gt;)
           </div>
           <p style={{ fontSize: "0.85rem", color: "#94a3b8", marginBottom: "1rem" }}>
-            Repair centers and customers can publicly verify whether a claimed commitment matches the registered warranty claim on-chain.
+            Repair centers and customers can publicly verify whether a claimed commitment matches the registered exam submission on-chain.
           </p>
           <form onSubmit={handleVerify} style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
             <input type="text" id="claimedCommitment" value={claimedCommitment}

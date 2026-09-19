@@ -103,7 +103,7 @@ export default function AdminPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.5rem" }}>
             {[
               { circuit: "setManufacturerCommitment(Uint<32>)", desc: "Anchor manufacturer authority + set required days", color: "#8b5cf6" },
-              { circuit: "revokeWarranty(Bytes<32>)", desc: "Revoke a fraudulent warranty claim (ZK auth)", color: "#ef4444" },
+              { circuit: "revokeWarranty(Bytes<32>)", desc: "Revoke a fraudulent exam submission (ZK auth)", color: "#ef4444" },
               { circuit: "resetProduct(Bytes<32>, Uint<32>)", desc: "Reset product ID + minimum days threshold", color: "#f59e0b" },
               { circuit: "incrementSession()", desc: "Bump session nonce (replay protection)", color: "#06b6d4" },
             ].map(c => (
@@ -165,7 +165,7 @@ export default function AdminPage() {
             </div>
             <button type="submit" className="btn-primary" disabled={isLoading || !revokeCommitment} id="revokeBtn"
               style={{ background: "rgba(239,68,68,0.15)", borderColor: "rgba(239,68,68,0.4)" }}>
-              {loadingRevoke ? <><span className="spinner" /> Revoking...</> : "Revoke Warranty Claim (ZK Auth)"}
+              {loadingRevoke ? <><span className="spinner" /> Revoking...</> : "Revoke Exam Submission (ZK Auth)"}
             </button>
           </form>
         </div>

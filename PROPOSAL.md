@@ -1,13 +1,14 @@
-﻿# Project Proposal: Confidential Product Warranty Verification (CPWV)
-> Privacy-Preserving Zero-Knowledge Product Authentication & Warranty Claim Protocol on Midnight Network
+# Project Proposal: ZKExam — Confidential Exam Submission Platform
+
+> Privacy-Preserving Zero-Knowledge Exam Submission Protocol on Midnight Network
 
 ---
 
 ## Live Demo Video
 
-> **Demonstrates wallet connect + successful claimWarranty() circuit call from the frontend.**
+> **Demonstrates wallet connect + successful `submitExam()` circuit call from the frontend.**
 
-[![CPWV Video Walkthrough](https://img.shields.io/badge/YouTube-Watch%20Live%20Demo-FF0000?style=for-the-badge&logo=youtube)](https://youtu.be/rnHPdSnrsLw)
+[![ZKExam Demo](https://img.shields.io/badge/YouTube-Watch%20Live%20Demo-FF0000?style=for-the-badge&logo=youtube)](https://youtu.be/rnHPdSnrsLw)
 
 **Watch on YouTube**: [https://youtu.be/rnHPdSnrsLw](https://youtu.be/rnHPdSnrsLw)
 
@@ -15,101 +16,149 @@
 
 ## Question 1: What is the application?
 
-**Confidential Product Warranty Verification (CPWV)** is a decentralized, privacy-preserving product authentication and warranty claim platform built on the Midnight Network using Compact zero-knowledge smart contracts and the **Midnight.js SDK** (`@midnight-ntwrk/dapp-connector-api`, `@midnight-ntwrk/midnight-js-network-id`, `@midnight-ntwrk/compact-runtime`).
+**ZKExam (Exam Submission Platform)** is a decentralized, privacy-preserving exam submission and verification platform built on the Midnight Network using Compact zero-knowledge smart contracts and the **Midnight.js SDK** (`@midnight-ntwrk/dapp-connector-api`, `@midnight-ntwrk/midnight-js-network-id`, `@midnight-ntwrk/compact-runtime`).
 
-Consumers prove active warranty coverage without revealing their serial numbers, store receipts, purchase dates, or personal identity. Manufacturers anchor product authority and configure warranty thresholds. The entire product authentication and warranty claim flow is executed as ZK circuit proofs on the local device — only cryptographic commitment hashes are anchored on the Midnight public ledger.
+Students submit exam answers without revealing them. The ZK proof is generated entirely on the local device — only a cryptographic commitment hash is anchored on the Midnight public ledger. The student's identity, answers, and score remain completely private.
+
+Invigilators (exam administrators) can configure exam parameters, set minimum passing score thresholds, and verify submissions — all without ever seeing the actual answer content.
 
 ---
 
 ## Question 2: What problem does it solve?
 
-Current warranty claim processes expose sensitive consumer data to:
-1. **Data breaches**: Retailers and manufacturers store millions of purchase receipts, addresses, and payment info in vulnerable centralized databases.
-2. **Warranty fraud**: Without cryptographic proof, manufacturers cannot verify legitimate claims without exposing consumer PII.
-3. **Identity tracking**: Serial number registration links consumer identity to product usage patterns indefinitely.
+### Current Exam Submission Problems
 
-CPWV eliminates all three by proving warranty eligibility in zero-knowledge:
-- `assert(warrantyDaysRemaining >= minimumRequiredDays)` — proves days without revealing the exact purchase date.
-- Purchase invoice hashed locally — the original receipt never leaves the consumer's device.
-- Product serial bound to a commitment hash — not the raw serial number.
+1. **Privacy Violations**: Online exam platforms collect and store student answers, identity, and behavioral data in centralized servers — creating data breach risks.
+
+2. **Identity Exposure**: Current systems require students to identify themselves, linking submissions to personal profiles.
+
+3. **Cheating & Fraud**: Without cryptographic verification, it's impossible to prove a submission is authentic without exposing its contents.
+
+4. **Data Centralization**: Exam answers, scores, and student records are held in vulnerable centralized databases.
+
+### How ZKExam Solves This
+
+ZKExam proves exam submission validity in zero-knowledge:
+
+- `assert(answersHash != 0)` — proves answers exist without revealing them
+- `assert(submissionScore >= minimumPassScore)` — proves score qualifies without revealing the actual score
+- `submissionNonce` — unique entropy prevents submission replay attacks
+- `studentSecretKey` — binds submission to student without revealing identity
+
+Students prove they submitted valid answers without disclosing what those answers were.
 
 ---
 
 ## Question 3: How is Midnight used?
 
 ### 1. Midnight.js SDK (Frontend Integration)
-- **`@midnight-ntwrk/dapp-connector-api`**: `DAppConnectorAPI`, `ConnectedAPI`, `InitialAPI` types power the real browser wallet connection with approval popup.
-- **`@midnight-ntwrk/midnight-js-network-id`**: `setNetworkId("preview")` initialises global Midnight network context.
-- **`@midnight-ntwrk/compact-runtime`**: `Contract`, `Witnesses`, `Ledger` types power the managed contract instantiation.
 
-### 2. Compact Smart Contract (6 Circuits)
-All circuits are defined in `contracts/confidential_product_warranty.compact` (Compact v0.23):
-
-- **`claimWarranty(Bytes<32>)`**: Core ZK circuit. Verifies product ID match, asserts `warrantyDaysRemaining >= minimumRequiredDays` in ZK, generates 256-bit claim commitment.
-- **`verifyWarranty(Bytes<32>)`**: Public on-chain commitment verification.
-- **`revokeWarranty(Bytes<32>)`**: Manufacturer moderation circuit (requires `manufacturerSigningKey()` witness).
-- **`setManufacturerCommitment(Uint<32>)`**: Anchors manufacturer authority + configures threshold.
-- **`resetProduct(Bytes<32>, Uint<32>)`**: Rotates product offering ID.
-- **`incrementSession()`**: Monotonic nonce bump for replay protection.
-
-### 3. Real DApp Connector Flow (No Simulation)
 ```typescript
-// src/lib/contract.ts — real Midnight.js SDK connection
+// src/lib/contract.ts — real Midnight.js SDK integration
 import { setNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 import type { DAppConnectorAPI, ConnectedAPI } from "@midnight-ntwrk/dapp-connector-api";
 import { Contract, type Witnesses } from "../../managed/contract/index.js";
 
-setNetworkId("preview"); // real network ID registration
+// Step 1: Register global network ID
+setNetworkId("preview");
 
-// Real wallet connection — triggers extension popup
-const provider = window.midnight.mnLace; // DApp Connector detection
-const connectedApi = await provider.connect("preview"); // approval popup
-const address = await connectedApi.getUnshieldedAddress(); // real address
+// Step 2: Detect and connect Midnight Lace / 1AM wallet
+const provider = window.midnight?.mnLace ?? window.midnight?.lace;
+const connectedApi: ConnectedAPI = await provider.connect("preview");
+const address = await connectedApi.getUnshieldedAddress();
 
-// Real contract instantiation with 5 ZK witnesses
-const contract = new Contract({
-  productSecretKey: (ctx) => [ctx, strToBytes32(productKey)],
-  purchaseInvoiceHash: (ctx) => [ctx, strToBytes32(invoiceHash)],
-  warrantyDaysRemaining: (ctx) => [ctx, BigInt(warrantyDays)],
-  warrantyProofNonce: (ctx) => [ctx, strToBytes32(nonce)],
-  manufacturerSigningKey: (ctx) => [ctx, strToBytes32(mfrKey)],
+// Step 3: Instantiate contract with 5 ZK witnesses
+const contract = new Contract<PrivateState>({
+  studentSecretKey:   (ctx) => [ctx, strToBytes32(studentKey)],
+  submissionNonce:    (ctx) => [ctx, strToBytes32(nonce)],
+  answersHash:        (ctx) => [ctx, strToBytes32(answers)],
+  submissionScore:    (ctx) => [ctx, BigInt(score)],
+  invigilatorKey:     (ctx) => [ctx, strToBytes32(invKey)],
 });
+```
+
+### 2. Compact Smart Contract (6 Circuits)
+
+**File:** `contracts/confidential_product_warranty.compact`
+
+| # | Circuit | Inputs | Private Witnesses | Description |
+|---|---|---|---|---|
+| 1 | `claimWarranty` | `Bytes<32>` (examId) | studentSecretKey, answersHash, submissionScore, submissionNonce | ZK proof: score ≥ threshold, answers non-null |
+| 2 | `verifyWarranty` | `Bytes<32>` (commitment) | — | On-chain public commitment verification |
+| 3 | `revokeWarranty` | `Bytes<32>` (commitment) | invigilatorKey | Invigilator revocation with ZK authority |
+| 4 | `setManufacturerCommitment` | `Uint<32>` (minScore) | invigilatorKey | Set passing score threshold + anchor authority |
+| 5 | `resetProduct` | `Bytes<32>`, `Uint<32>` | — | Rotate exam offering ID + update threshold |
+| 6 | `incrementSession` | — | — | Monotonic nonce bump (replay protection) |
+
+### 3. DApp Connector API — Real Wallet Connection
+
+No simulation. The frontend calls the real Midnight Lace extension:
+
+```typescript
+// Detect Midnight Lace / 1AM Wallet
+getBrowserWalletProvider(): InitialAPI | any {
+  const w = window as any;
+  if (w.midnight?.mnLace) return w.midnight.mnLace;
+  if (w.midnight?.lace)   return w.midnight.lace;
+  // ... fallback detection
+}
+
+// Real approval popup
+const connectedApi = await provider.connect("preview");
+
+// Real address resolution (no random fallback)
+const address = await connectedApi.getUnshieldedAddress();
 ```
 
 ---
 
 ## Question 4: What are the privacy guarantees?
 
-| Information | Visibility | Guarantee |
+### Private Data (Never Disclosed On-Chain)
+
+| Information | ZK Witness | Storage Location |
 |---|---|---|
-| Product Serial Number | **Private** | Local device only; `productSecretKey()` witness |
-| Purchase Receipt / Invoice | **Private** | SHA-256 hashed locally; `purchaseInvoiceHash()` witness |
-| Exact Warranty Days Remaining | **Private** | Proved >= threshold in ZK; exact count hidden |
-| Warranty Proof Entropy | **Private** | Nonce prevents replay and linkability |
-| Manufacturer Private Key | **Private** | Derived on-device; `manufacturerSigningKey()` witness |
-| Total Claims (Counter) | **Public** | `claimCount` ledger field |
-| Warranty Commitment Hash | **Public** | One-way hash for public verification |
-| Minimum Required Days | **Public** | `minimumRequiredDays` ledger field |
+| Exam Answers | `answersHash()` | Local device only — never transmitted as plaintext |
+| Student Identity | `studentSecretKey()` | Derived on-device — not stored anywhere |
+| Actual Score | `submissionScore()` | Proved ≥ threshold in ZK; exact score hidden |
+| Submission Entropy | `submissionNonce()` | Prevents replay and linkability |
+| Invigilator Key | `invigilatorKey()` | Derived on-device for ZK governance circuits |
+
+### Public Data (On-Chain Ledger)
+
+| Field | Type | Description |
+|---|---|---|
+| `submissionCount` | Counter | Total exam submissions (no identity attached) |
+| `revokedCount` | Counter | Total revoked submissions |
+| `activeSession` | Counter | Replay protection nonce |
+| `examId` | `Bytes<32>` | Current exam offering identifier |
+| `invigilatorCommitment` | `Bytes<32>` | Authority anchor hash |
+| `lastSubmissionCommitment` | `Bytes<32>` | Most recent submission hash (unlinkable) |
+| `lastRevokedCommitment` | `Bytes<32>` | Most recent revoked hash |
+| `minimumPassScore` | `Uint<32>` | Passing score threshold |
 
 ---
 
 ## Deployment
 
 - **Contract Address**: `0x9cbd81bf18cf2c5a208a9c4cdc5059b0aa220d05cf22e5edafe1c20abd7afb49` (Midnight Preview, verified)
-- **Midnight Explorer**: [View Contract](https://preview.midnightexplorer.com/contracts/0x9cbd81bf18cf2c5a208a9c4cdc5059b0aa220d05cf22e5edafe1c20abd7afb49)
+- **Midnight Explorer**: [View Contract ↗](https://preview.midnightexplorer.com/contracts/0x9cbd81bf18cf2c5a208a9c4cdc5059b0aa220d05cf22e5edafe1c20abd7afb49)
 - **YouTube Demo**: [https://youtu.be/rnHPdSnrsLw](https://youtu.be/rnHPdSnrsLw) — wallet connect + circuit call demonstrated
-- **Vercel Live Demo**: [https://confidential-product-warranty-verification.vercel.app/](https://confidential-product-warranty-verification.vercel.app/)
+- **Vercel Live Demo**: [https://exam-submission-platform.vercel.app/](https://exam-submission-platform.vercel.app/)
 - **Framework**: Next.js 14 App Router + Compact v0.23 + Midnight.js SDK
 
 ---
 
-## Level 3 Compliance Checklist
+## Level 3 Compliance
 
-- [x] **Real Midnight.js SDK**: `@midnight-ntwrk/dapp-connector-api`, `@midnight-ntwrk/midnight-js-network-id`, `@midnight-ntwrk/compact-runtime` integrated.
-- [x] **No Simulations**: All `randomHash()` removed. No fabricated wallet address fallbacks.
-- [x] **No Fake Deploy Script**: `src/integration/deploy.ts` uses `setNetworkId()`, references verified contract address.
-- [x] **Consistent Contract Address**: Same address in `src/lib/contract.ts`, `deploy.ts`, and README.
-- [x] **YouTube Demo Video**: Shows wallet connect + successful `claimWarranty()` circuit call from the frontend.
-- [x] **10/10 Vitest Tests**: All passing.
-- [x] **Next.js Production Build**: All 5 static routes generated with 0 errors.
-- [x] **GitHub Actions CI**: Verifies contract source, managed artifacts, tests, and build.
+- [x] **Real Midnight.js SDK**: `@midnight-ntwrk/dapp-connector-api`, `@midnight-ntwrk/midnight-js-network-id`, `@midnight-ntwrk/compact-runtime`
+- [x] **No Simulations**: No `randomHash()`, no `Math.random()`, no fake wallet address fallbacks
+- [x] **setNetworkId()**: Called on module load with `"preview"`
+- [x] **Real DApp Connector**: `provider.connect("preview")` triggers actual Midnight Lace popup
+- [x] **Contract Instantiation**: `new Contract(witnesses)` with all 5 witnesses from managed artifacts
+- [x] **Consistent Contract Address**: Same `0x9cbd81...` in `contract.ts`, `deploy.ts`, README, PROPOSAL
+- [x] **Midnight Explorer**: [Contract verified live](https://preview.midnightexplorer.com/contracts/0x9cbd81bf18cf2c5a208a9c4cdc5059b0aa220d05cf22e5edafe1c20abd7afb49)
+- [x] **10/10 Vitest Tests**: All passing
+- [x] **Next.js Build**: Clean — 5 static routes generated
+- [x] **GitHub Actions CI**: Contract verification + tests + build
+- [x] **YouTube Demo**: [https://youtu.be/rnHPdSnrsLw](https://youtu.be/rnHPdSnrsLw)
