@@ -1,4 +1,4 @@
-# Project Proposal: ZKExam — Confidential Exam Submission Platform
+﻿# Project Proposal: ZKExam — Confidential Exam Submission Platform
 
 > Privacy-Preserving Zero-Knowledge Exam Submission Protocol on Midnight Network
 
@@ -8,9 +8,9 @@
 
 > **Demonstrates wallet connect + successful `submitExam()` circuit call from the frontend.**
 
-[![ZKExam Demo](https://img.shields.io/badge/YouTube-Watch%20Live%20Demo-FF0000?style=for-the-badge&logo=youtube)](https://youtu.be/rnHPdSnrsLw)
+[![ZKExam Demo](https://img.shields.io/badge/YouTube-Watch%20Live%20Demo-FF0000?style=for-the-badge&logo=youtube)](https://youtu.be/3RXVaEPiCcM)
 
-**Watch on YouTube**: [https://youtu.be/rnHPdSnrsLw](https://youtu.be/rnHPdSnrsLw)
+**Watch on YouTube**: [https://youtu.be/3RXVaEPiCcM](https://youtu.be/3RXVaEPiCcM)
 
 ---
 
@@ -143,7 +143,7 @@ const address = await connectedApi.getUnshieldedAddress();
 
 - **Contract Address**: `0x9cbd81bf18cf2c5a208a9c4cdc5059b0aa220d05cf22e5edafe1c20abd7afb49` (Midnight Preview, verified)
 - **Midnight Explorer**: [View Contract ↗](https://preview.midnightexplorer.com/contracts/0x9cbd81bf18cf2c5a208a9c4cdc5059b0aa220d05cf22e5edafe1c20abd7afb49)
-- **YouTube Demo**: [https://youtu.be/rnHPdSnrsLw](https://youtu.be/rnHPdSnrsLw) — wallet connect + circuit call demonstrated
+- **YouTube Demo**: [https://youtu.be/3RXVaEPiCcM](https://youtu.be/3RXVaEPiCcM) — wallet connect + circuit call demonstrated
 - **Vercel Live Demo**: [https://exam-submission-platform.vercel.app/](https://exam-submission-platform.vercel.app/)
 - **Framework**: Next.js 14 App Router + Compact v0.23 + Midnight.js SDK
 
@@ -161,4 +161,4 @@ const address = await connectedApi.getUnshieldedAddress();
 - [x] **10/10 Vitest Tests**: All passing
 - [x] **Next.js Build**: Clean — 5 static routes generated
 - [x] **GitHub Actions CI**: Contract verification + tests + build
-- [x] **YouTube Demo**: [https://youtu.be/rnHPdSnrsLw](https://youtu.be/rnHPdSnrsLw)
+- [x] **YouTube Demo**: [https://youtu.be/3RXVaEPiCcM](https://youtu.be/3RXVaEPiCcM)
