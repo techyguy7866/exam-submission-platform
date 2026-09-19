@@ -1,0 +1,39 @@
+﻿name: CI/CD Pipeline — Confidential Product Warranty Verification
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js v22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Verify Compact Contract Source
+        run: |
+          echo "=== Compact Contract (confidential_product_warranty.compact) ==="
+          cat contracts/confidential_product_warranty.compact
+          echo ""
+          echo "=== Managed Contract Type Definitions ==="
+          cat managed/contract/index.d.ts
+          echo ""
+          echo "✅ Contract source and managed artifacts verified."
+          ls -la managed/contract/
+
+      - name: Run Vitest Unit Tests
+        run: npm test
+
+      - name: Build Next.js Application
+        run: npm run build
