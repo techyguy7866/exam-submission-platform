@@ -1,7 +1,7 @@
 ﻿"use client";
 
 // ============================================================================
-// CONFIDENTIAL PRODUCT WARRANTY VERIFICATION (CPWV) — MIDNIGHT.JS SDK CLIENT
+// ANONYMOUS EXAM SUBMISSION PORTAL (AESP) — MIDNIGHT.JS SDK CLIENT
 // ============================================================================
 // Real DApp Connector + Midnight.js transaction/proof flow.
 // Uses @midnight-ntwrk/dapp-connector-api for wallet connection.
@@ -74,8 +74,8 @@ function strToBytes32(str: string): Uint8Array {
   return arr;
 }
 
-// ── Main CPWV Client ──────────────────────────────────────────────────────────
-export class ConfidentialWarrantyClient {
+// ── Main AESP Client ──────────────────────────────────────────────────────────
+export class AnonymousExamClient {
   private contractAddress: string;
   private networkConfig: NetworkConfiguration;
   private isConnected = false;
@@ -83,10 +83,10 @@ export class ConfidentialWarrantyClient {
   private walletApi: ConnectedAPI | any = null;
 
   // Private witness values (set by the UI before circuit calls)
-  private _productSecretKey = "default_product_serial_key";
-  private _purchaseInvoice = "default_purchase_invoice_hash";
-  private _warrantyDays = 365;
-  private _manufacturerKey = "default_manufacturer_signing_key";
+  private _studentSecretKey = "default_student_secret_key";
+  private _answersHash = "default_exam_answers_hash";
+  private _submissionScore = 365;
+  private _invigilatorKey = "default_invigilator_signing_key";
 
   constructor(address: string = CONTRACT_ADDRESS) {
     this.contractAddress = address;
@@ -94,8 +94,8 @@ export class ConfidentialWarrantyClient {
 
     // Restore session if previously connected
     if (typeof sessionStorage !== "undefined") {
-      const ok = sessionStorage.getItem("cpwv_wallet_connected") === "true";
-      const addr = sessionStorage.getItem("cpwv_wallet_address");
+      const ok = sessionStorage.getItem("aesp_wallet_connected") === "true";
+      const addr = sessionStorage.getItem("aesp_wallet_address");
       if (ok && addr) {
         this.isConnected = true;
         this.connectedAddress = addr;
@@ -104,10 +104,10 @@ export class ConfidentialWarrantyClient {
   }
 
   // ── Setters (called from UI before circuit invocations) ───────────────────
-  public setProductSecretKey(k: string) { this._productSecretKey = k; }
-  public setPurchaseInvoice(i: string)  { this._purchaseInvoice = i; }
-  public setWarrantyDays(d: number)     { this._warrantyDays = d; }
-  public setManufacturerKey(k: string)  { this._manufacturerKey = k; }
+  public setStudentSecretKey(k: string) { this._studentSecretKey = k; }
+  public setAnswersHash(h: string)      { this._answersHash = h; }
+  public setSubmissionScore(s: number)  { this._submissionScore = s; }
+  public setInvigilatorKey(k: string)   { this._invigilatorKey = k; }
 
   public getNetworkConfig(): NetworkConfiguration { return this.networkConfig; }
   public getContractAddress(): string { return this.contractAddress; }
@@ -115,11 +115,11 @@ export class ConfidentialWarrantyClient {
   // ── Instantiate managed Contract with 5 ZK witnesses ─────────────────────
   private buildContract(): Contract<any> {
     const witnesses: Witnesses<any> = {
-      productSecretKey:    (ctx) => [ctx, strToBytes32(this._productSecretKey)],
-      warrantyProofNonce:  (ctx) => [ctx, strToBytes32(`nonce::${this._productSecretKey}::${Date.now()}`)],
-      purchaseInvoiceHash: (ctx) => [ctx, strToBytes32(this._purchaseInvoice)],
-      warrantyDaysRemaining: (ctx) => [ctx, BigInt(this._warrantyDays)],
-      manufacturerSigningKey: (ctx) => [ctx, strToBytes32(this._manufacturerKey)],
+      productSecretKey:    (ctx) => [ctx, strToBytes32(this._studentSecretKey)],
+      warrantyProofNonce:  (ctx) => [ctx, strToBytes32(`nonce::${this._studentSecretKey}::${Date.now()}`)],
+      purchaseInvoiceHash: (ctx) => [ctx, strToBytes32(this._answersHash)],
+      warrantyDaysRemaining: (ctx) => [ctx, BigInt(this._submissionScore)],
+      manufacturerSigningKey: (ctx) => [ctx, strToBytes32(this._invigilatorKey)],
     };
     return new Contract(witnesses);
   }
@@ -230,8 +230,8 @@ export class ConfidentialWarrantyClient {
     this.isConnected = true;
     this.connectedAddress = address;
     if (typeof sessionStorage !== "undefined") {
-      sessionStorage.setItem("cpwv_wallet_connected", "true");
-      sessionStorage.setItem("cpwv_wallet_address", address);
+      sessionStorage.setItem("aesp_wallet_connected", "true");
+      sessionStorage.setItem("aesp_wallet_address", address);
     }
     return {
       connected: true,
@@ -245,8 +245,8 @@ export class ConfidentialWarrantyClient {
     this.connectedAddress = null;
     this.walletApi = null;
     if (typeof sessionStorage !== "undefined") {
-      sessionStorage.removeItem("cpwv_wallet_connected");
-      sessionStorage.removeItem("cpwv_wallet_address");
+      sessionStorage.removeItem("aesp_wallet_connected");
+      sessionStorage.removeItem("aesp_wallet_address");
     }
     return { connected: false };
   }
@@ -256,7 +256,7 @@ export class ConfidentialWarrantyClient {
   }
 
   // ── Circuit 1: claimWarranty(Bytes<32>) ───────────────────────────────────
-  // Proves product ownership + warranty validity without revealing serial/receipt.
+  // Proves exam answers submitted + score above threshold without revealing answers or identity.
   public async claimWarranty(expectedProductId: string): Promise<{
     txHash: string;
     commitmentHex: string;
@@ -283,39 +283,39 @@ export class ConfidentialWarrantyClient {
         const commitment =
           txRes?.commitment ||
           deriveCommitment([
-            "cpw:warranty:v2",
-            this._productSecretKey,
-            this._purchaseInvoice,
+            "aesp:exam:submission:v2",
+            this._studentSecretKey,
+            this._answersHash,
             expectedProductId,
           ]);
         return {
           txHash: txId,
           commitmentHex: commitment,
-          daysRequirementMet: this._warrantyDays >= 30,
+          daysRequirementMet: this._submissionScore >= 30,
           signedBy: this.connectedAddress!,
           txFee: "0.0042",
           txFeeAsset: "tDUST",
         };
       } catch (e) {
-        console.warn("[CPWV] submitCallTx not available, using proof simulation:", e);
+        console.warn("[AESP] submitCallTx not available, using proof simulation:", e);
       }
     }
 
     // Deterministic proof simulation (no Math.random / crypto.getRandomValues)
     const commitment = deriveCommitment([
-      "cpw:warranty:v2",
-      this._productSecretKey,
-      this._purchaseInvoice,
+      "aesp:exam:submission:v2",
+      this._studentSecretKey,
+      this._answersHash,
       expectedProductId,
-      String(this._warrantyDays),
+      String(this._submissionScore),
     ]);
-    const txHash = deriveCommitment(["cpw:tx", commitment, NETWORK_CONFIG.networkId]);
+    const txHash = deriveCommitment(["aesp:tx", commitment, NETWORK_CONFIG.networkId]);
 
     return {
       txHash,
       commitmentHex: commitment,
-      daysRequirementMet: this._warrantyDays >= 30,
-      signedBy: this.connectedAddress || "mn_preview1_lace_connected",
+      daysRequirementMet: this._submissionScore >= 30,
+      signedBy: this.connectedAddress || "mn_preview1_aesp_connected",
       txFee: "0.0042",
       txFeeAsset: "tDUST",
     };
@@ -326,7 +326,7 @@ export class ConfidentialWarrantyClient {
     matches: boolean;
     txHash: string;
   }> {
-    const txHash = deriveCommitment(["cpw:verify", commitment, NETWORK_CONFIG.networkId]);
+    const txHash = deriveCommitment(["aesp:verify", commitment, NETWORK_CONFIG.networkId]);
     const matches = commitment.startsWith("0x") && commitment.length >= 10;
     return { matches, txHash };
   }
@@ -337,11 +337,11 @@ export class ConfidentialWarrantyClient {
     revokedCommitment: string;
   }> {
     const revokedCommitment = deriveCommitment([
-      "cpw:revoked",
+      "aesp:revoked",
       commitment,
-      this._manufacturerKey,
+      this._invigilatorKey,
     ]);
-    const txHash = deriveCommitment(["cpw:tx:revoke", revokedCommitment]);
+    const txHash = deriveCommitment(["aesp:tx:revoke", revokedCommitment]);
     return { txHash, revokedCommitment };
   }
 
@@ -352,10 +352,10 @@ export class ConfidentialWarrantyClient {
     newMinimumDays: number;
   }> {
     const manufacturerCommitment = deriveCommitment([
-      "cpw:manufacturer:authority:v1",
-      this._manufacturerKey,
+      "aesp:invigilator:authority:v1",
+      this._invigilatorKey,
     ]);
-    const txHash = deriveCommitment(["cpw:tx:setMfr", manufacturerCommitment, String(days)]);
+    const txHash = deriveCommitment(["aesp:tx:setInvigilator", manufacturerCommitment, String(days)]);
     return { txHash, manufacturerCommitment, newMinimumDays: days };
   }
 
@@ -365,14 +365,14 @@ export class ConfidentialWarrantyClient {
     newProductId: string;
     newMinimumDays: number;
   }> {
-    const txHash = deriveCommitment(["cpw:tx:resetProduct", newProductId, String(newMinimumDays)]);
+    const txHash = deriveCommitment(["aesp:tx:resetExam", newProductId, String(newMinimumDays)]);
     return { txHash, newProductId, newMinimumDays };
   }
 
   // ── Circuit 6: incrementSession() ────────────────────────────────────────
   public async incrementSession(): Promise<{ txHash: string }> {
     const txHash = deriveCommitment([
-      "cpw:tx:session",
+      "aesp:tx:session",
       this.contractAddress,
       NETWORK_CONFIG.networkId,
       String(Date.now()),
@@ -382,8 +382,8 @@ export class ConfidentialWarrantyClient {
 }
 
 // ── Singleton factory ─────────────────────────────────────────────────────────
-let _client: ConfidentialWarrantyClient | null = null;
-export function getClient(): ConfidentialWarrantyClient {
-  if (!_client) _client = new ConfidentialWarrantyClient();
+let _client: AnonymousExamClient | null = null;
+export function getClient(): AnonymousExamClient {
+  if (!_client) _client = new AnonymousExamClient();
   return _client;
 }
