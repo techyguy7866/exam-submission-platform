@@ -1,4 +1,4 @@
-# ZKExam — Confidential Exam Submission Platform
+﻿# ZKExam — Confidential Exam Submission Platform
 
 > A privacy-preserving zero-knowledge exam submission dApp built on the Midnight Network using Compact smart contracts and Midnight.js SDK.
 
@@ -58,20 +58,23 @@ The demo shows:
 
 ## Platform Screenshots
 
-### 1. Main Dashboard — Hero, Stats & Feature Cards
-![Main Dashboard](photos/main_dashboard.png)
+### 1. Main Dashboard — Hero, Live Stats & Feature Cards
+![Main Dashboard](photos/dashboard-main-home.png)
 
-### 2. Exam Submission Portal — ZK Proof Terminal
-![Exam Submission](photos/claim_side.png)
+### 2. Exam Submission Portal — ZK Proof Terminal & Answer Submission
+![Exam Submission](photos/submit-exam-dashboard.png)
 
-### 3. Admin / Invigilator Console
-![Admin Console](photos/admin_panel.png)
+### 3. Admin / Invigilator Console — Score Threshold & Authority
+![Admin Console](photos/admin-dashboard.png)
 
-### 4. Mobile Responsive UI
-![Mobile UI](photos/mobile_ui.png)
+### 4. Midnight Contract Explorer — On-Chain Verification
+![Contract Explorer](photos/contract-explorer.png)
 
-### 5. Vitest Unit Tests — 10/10 Passing
-![Test Results](photos/test-run.png)
+### 5. Mobile Responsive Interface
+![Mobile UI](photos/mobile-interface.png)
+
+### 6. Vitest Automated Test Suite — 10/10 Tests Passing
+![Test Results](photos/test-run-terminal.png)
 
 ---
 
@@ -81,12 +84,12 @@ The demo shows:
 Next.js 14 UI (exam submission form)
          │
          │ import { getClient } from "@/lib/contract"
+         ▼
+AnonymousExamClient (src/lib/contract.ts)
          │
-ConfidentialWarrantyClient (src/lib/contract.ts)
-         │
-         ├── @midnight-ntwrk/dapp-connector-api     ← wallet connect/approval popup
-         ├── @midnight-ntwrk/midnight-js-network-id  ← setNetworkId("preview")
-         └── @midnight-ntwrk/compact-runtime         ← Contract + Witnesses + Ledger
+         ├─► @midnight-ntwrk/dapp-connector-api     ──► wallet connect/approval popup
+         ├─► @midnight-ntwrk/midnight-js-network-id  ──► setNetworkId("preview")
+         └──► @midnight-ntwrk/compact-runtime         ──► Contract + Witnesses + Ledger
          │
 Midnight Lace / 1AM Extension (browser)
          │
@@ -102,7 +105,7 @@ Contract: 0x9cbd81bf18cf2c5a208a9c4cdc5059b0aa220d05cf22e5edafe1c20abd7afb49
 
 | # | Circuit | Inputs | Witnesses | Description |
 |---|---|---|---|---|
-| 1 | `claimWarranty` | `Bytes<32>` (examId) | studentSecretKey, answersHash, submissionScore, submissionNonce | ZK proof: score ≥ threshold, answers non-null |
+| 1 | `claimWarranty` (submitExam) | `Bytes<32>` (examId) | studentSecretKey, answersHash, submissionScore, submissionNonce | ZK proof: score >= threshold, answers non-null |
 | 2 | `verifyWarranty` | `Bytes<32>` (commitment) | — | Public commitment verification |
 | 3 | `revokeWarranty` | `Bytes<32>` (commitment) | invigilatorKey | Invigilator revocation with ZK authority |
 | 4 | `setManufacturerCommitment` | `Uint<32>` (minScore) | invigilatorKey | Set passing threshold + anchor authority |
@@ -119,7 +122,7 @@ Contract: 0x9cbd81bf18cf2c5a208a9c4cdc5059b0aa220d05cf22e5edafe1c20abd7afb49
 |---|---|---|
 | Exam Answers | `answersHash()` | Local device only |
 | Student Identity | `studentSecretKey()` | Derived on-device |
-| Actual Score | `submissionScore()` | Proved ≥ threshold in ZK; value hidden |
+| Actual Score | `submissionScore()` | Proved >= threshold in ZK; value hidden |
 | Proof Entropy | `submissionNonce()` | Prevents replay & linkability |
 | Invigilator Key | `invigilatorKey()` | On-device for governance circuits |
 
