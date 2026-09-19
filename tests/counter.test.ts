@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Contract, ledger } from '../managed/contract/index.js';
 
 // --- Helpers -----------------------------------------------------------------
@@ -12,30 +12,30 @@ function toBytes32(str: string): Uint8Array {
 }
 
 function buildWitnesses(opts: {
-  productKey?: string;
+  studentKey?: string;
   nonce?: string;
-  invoiceHash?: string;
-  daysRemaining?: bigint;
-  mfrKey?: string;
+  answersHash?: string;
+  submissionScore?: bigint;
+  invigilatorKey?: string;
 }) {
-  const productKey = toBytes32(opts.productKey ?? 'default_product_serial_key');
-  const nonce = toBytes32(opts.nonce ?? 'default_warranty_nonce');
-  const invoiceHash = toBytes32(opts.invoiceHash ?? 'default_purchase_invoice');
-  const daysRemaining = opts.daysRemaining ?? 365n;
-  const mfrKey = toBytes32(opts.mfrKey ?? 'default_manufacturer_key');
+  const studentKey    = toBytes32(opts.studentKey    ?? 'default_student_secret_key');
+  const nonce         = toBytes32(opts.nonce         ?? 'default_submission_nonce');
+  const answersHash   = toBytes32(opts.answersHash   ?? 'default_exam_answers_hash');
+  const score         = opts.submissionScore         ?? 365n;
+  const invigilatorKey = toBytes32(opts.invigilatorKey ?? 'default_invigilator_key');
 
   return {
-    productSecretKey: (ctx: any) => [ctx.privateState, productKey] as [any, Uint8Array],
-    warrantyProofNonce: (ctx: any) => [ctx.privateState, nonce] as [any, Uint8Array],
-    purchaseInvoiceHash: (ctx: any) => [ctx.privateState, invoiceHash] as [any, Uint8Array],
-    warrantyDaysRemaining: (ctx: any) => [ctx.privateState, daysRemaining] as [any, bigint],
-    manufacturerSigningKey: (ctx: any) => [ctx.privateState, mfrKey] as [any, Uint8Array],
+    productSecretKey:       (ctx: any) => [ctx.privateState, studentKey]       as [any, Uint8Array],
+    warrantyProofNonce:     (ctx: any) => [ctx.privateState, nonce]            as [any, Uint8Array],
+    purchaseInvoiceHash:    (ctx: any) => [ctx.privateState, answersHash]      as [any, Uint8Array],
+    warrantyDaysRemaining:  (ctx: any) => [ctx.privateState, score]            as [any, bigint],
+    manufacturerSigningKey: (ctx: any) => [ctx.privateState, invigilatorKey]   as [any, Uint8Array],
   };
 }
 
 // --- Test Suite --------------------------------------------------------------
 
-describe('Confidential Product Warranty Verification (CPWV) � Midnight ZK Contract v2', () => {
+describe('Anonymous Exam Submission Portal — Midnight ZK Contract v2', () => {
 
   it('1. Contract Structure: core circuits are exported and callable from managed runtime', () => {
     const contract = new Contract(buildWitnesses({}));
@@ -47,13 +47,13 @@ describe('Confidential Product Warranty Verification (CPWV) � Midnight ZK Cont
     expect(contract).toHaveProperty('witnesses');
   });
 
-  it('2. Witness Completeness: all 5 witnesses (including warranty days and manufacturer key) are defined', () => {
+  it('2. Witness Completeness: all 5 witnesses (including submission score and invigilator key) are defined', () => {
     const witnesses = buildWitnesses({
-      productKey: 'serial_macbook_pro_m3_2026',
-      nonce: 'entropy_nonce_warranty_claim',
-      invoiceHash: 'sha256_store_receipt_hash',
-      daysRemaining: 180n,
-      mfrKey: 'mfr_signing_key_apple_inc',
+      studentKey:      'secret_student_id_key_2026',
+      nonce:           'entropy_nonce_exam_submission',
+      answersHash:     'sha256_answers_hash_exam_01',
+      submissionScore: 180n,
+      invigilatorKey:  'invigilator_signing_key_exam_board',
     });
     const contract = new Contract(witnesses);
 
@@ -64,70 +64,70 @@ describe('Confidential Product Warranty Verification (CPWV) � Midnight ZK Cont
     expect(contract.witnesses.manufacturerSigningKey).toBeDefined();
   });
 
-  it('3. Private Witness Byte Length: productSecretKey, warrantyProofNonce, purchaseInvoiceHash are 32 bytes', () => {
+  it('3. Private Witness Byte Length: studentKey, submissionNonce, answersHash are all 32 bytes', () => {
     const witnesses = buildWitnesses({
-      productKey: 'serial_secret_key_alpha',
-      nonce: 'random_nonce_beta',
-      invoiceHash: 'hashed_invoice_gamma',
+      studentKey:  'student_secret_key_alpha',
+      nonce:       'random_nonce_beta',
+      answersHash: 'hashed_answers_gamma',
     });
     const mockCtx = { privateState: {} };
 
-    const [, keyBytes] = witnesses.productSecretKey(mockCtx);
-    const [, nonceBytes] = witnesses.warrantyProofNonce(mockCtx);
-    const [, invoiceBytes] = witnesses.purchaseInvoiceHash(mockCtx);
+    const [, keyBytes]     = witnesses.productSecretKey(mockCtx);
+    const [, nonceBytes]   = witnesses.warrantyProofNonce(mockCtx);
+    const [, answersBytes] = witnesses.purchaseInvoiceHash(mockCtx);
 
     expect(keyBytes.length).toBe(32);
     expect(nonceBytes.length).toBe(32);
-    expect(invoiceBytes.length).toBe(32);
+    expect(answersBytes.length).toBe(32);
   });
 
-  it('4. Warranty Days Threshold Witness: warrantyDaysRemaining returns bigint usable for active days check', () => {
-    const activeDays = 120n;
-    const minimumRequiredDays = 30n;
-    const witnesses = buildWitnesses({ daysRemaining: activeDays });
+  it('4. Submission Score Threshold Witness: submissionScore returns bigint for passing check', () => {
+    const studentScore   = 120n;
+    const minimumPass    = 30n;
+    const witnesses = buildWitnesses({ submissionScore: studentScore });
     const mockCtx = { privateState: {} };
 
-    const [, days] = witnesses.warrantyDaysRemaining(mockCtx);
-    expect(typeof days).toBe('bigint');
-    expect(days).toBe(120n);
-    expect(days >= minimumRequiredDays).toBe(true); // Product warranty QUALIFIES
+    const [, score] = witnesses.warrantyDaysRemaining(mockCtx);
+    expect(typeof score).toBe('bigint');
+    expect(score).toBe(120n);
+    expect(score >= minimumPass).toBe(true); // Submission QUALIFIES
   });
 
-  it('5. ZK Privacy: private witnesses are strictly isolated from public productId (no data leak)', () => {
-    const publicProductId = toBytes32('prod_macbook_pro_m3_2026');
+  it('5. ZK Privacy: student private witnesses are strictly isolated from public examId (no data leak)', () => {
+    const publicExamId = toBytes32('exam_offering_midterm_2026');
     const witnesses = buildWitnesses({
-      productKey: 'super_secret_serial_key',
-      nonce: 'private_warranty_nonce_secret',
-      invoiceHash: 'encrypted_receipt_invoice_hash',
+      studentKey:  'super_secret_student_key',
+      nonce:       'private_submission_nonce_secret',
+      answersHash: 'encrypted_answers_hash',
     });
     const mockCtx = { privateState: {} };
 
-    const [, keyBytes] = witnesses.productSecretKey(mockCtx);
-    const [, nonceBytes] = witnesses.warrantyProofNonce(mockCtx);
-    const [, invoiceBytes] = witnesses.purchaseInvoiceHash(mockCtx);
+    const [, keyBytes]     = witnesses.productSecretKey(mockCtx);
+    const [, nonceBytes]   = witnesses.warrantyProofNonce(mockCtx);
+    const [, answersBytes] = witnesses.purchaseInvoiceHash(mockCtx);
 
-    expect(keyBytes).not.toEqual(publicProductId);
-    expect(nonceBytes).not.toEqual(publicProductId);
-    expect(invoiceBytes).not.toEqual(publicProductId);
+    expect(keyBytes).not.toEqual(publicExamId);
+    expect(nonceBytes).not.toEqual(publicExamId);
+    expect(answersBytes).not.toEqual(publicExamId);
   });
 
-  it('6. Manufacturer Authority Witness: manufacturerSigningKey produces 32-byte array independent of product key', () => {
+  it('6. Invigilator Authority Witness: invigilatorKey produces 32-byte array independent of student key', () => {
     const witnesses = buildWitnesses({
-      productKey: 'product_serial_secret_abc',
-      mfrKey: 'manufacturer_signing_key_xyz',
+      studentKey:    'student_secret_key_abc',
+      invigilatorKey: 'invigilator_signing_key_xyz',
     });
     const mockCtx = { privateState: {} };
 
-    const [, productKeyBytes] = witnesses.productSecretKey(mockCtx);
-    const [, mfrKeyBytes] = witnesses.manufacturerSigningKey(mockCtx);
+    const [, studentKeyBytes]     = witnesses.productSecretKey(mockCtx);
+    const [, invigilatorKeyBytes] = witnesses.manufacturerSigningKey(mockCtx);
 
-    expect(mfrKeyBytes.length).toBe(32);
-    expect(mfrKeyBytes).not.toEqual(productKeyBytes);
+    expect(invigilatorKeyBytes.length).toBe(32);
+    expect(invigilatorKeyBytes).not.toEqual(studentKeyBytes);
   });
 
-  it('7. Multi-Product Commitment Uniqueness: different products produce distinct contract instances', () => {
-    const witnessesA = buildWitnesses({ productKey: 'serial_apple_watch', invoiceHash: 'invoice_store_a' });
-    const witnessesB = buildWitnesses({ productKey: 'serial_ipad_pro', invoiceHash: 'invoice_store_b' });
+  it('7. Multi-Submission Commitment Uniqueness: different students produce distinct contract instances', () => {
+    const witnessesA = buildWitnesses({ studentKey: 'student_alice_key', answersHash: 'answers_set_a' });
+    const witnessesB = buildWitnesses({ studentKey: 'student_bob_key',   answersHash: 'answers_set_b' });
     const mockCtx = { privateState: {} };
 
     const contractA = new Contract(witnessesA);
@@ -144,19 +144,19 @@ describe('Confidential Product Warranty Verification (CPWV) � Midnight ZK Cont
     expect(typeof ledger).toBe('function');
   });
 
-  it('9. Expired Warranty Fail Case: warrantyDaysRemaining below minimumRequiredDays fails threshold check', () => {
-    const expiredDays = 5n;
-    const minimumRequiredDays = 30n;
-    const witnesses = buildWitnesses({ daysRemaining: expiredDays });
+  it('9. Failed Submission Case: submissionScore below minimumPassScore fails threshold check', () => {
+    const studentScore  = 5n;
+    const minimumPass   = 30n;
+    const witnesses = buildWitnesses({ submissionScore: studentScore });
     const mockCtx = { privateState: {} };
 
-    const [, days] = witnesses.warrantyDaysRemaining(mockCtx);
-    expect(days >= minimumRequiredDays).toBe(false); // Warranty EXPIRED � circuit would reject claim
+    const [, score] = witnesses.warrantyDaysRemaining(mockCtx);
+    expect(score >= minimumPass).toBe(false); // Submission FAILS — score too low
   });
 
-  it('10. Session Isolation: witnesses built for different sessions produce independent nonce contexts', () => {
-    const witnessesSession1 = buildWitnesses({ nonce: 'session_1_warranty_nonce', daysRemaining: 90n });
-    const witnessesSession2 = buildWitnesses({ nonce: 'session_2_warranty_nonce', daysRemaining: 180n });
+  it('10. Session Isolation: witnesses built for different exam sessions produce independent nonce contexts', () => {
+    const witnessesSession1 = buildWitnesses({ nonce: 'session_1_exam_nonce', submissionScore: 90n });
+    const witnessesSession2 = buildWitnesses({ nonce: 'session_2_exam_nonce', submissionScore: 180n });
     const mockCtx = { privateState: { sessionId: 'test' } };
 
     const [, nonce1] = witnessesSession1.warrantyProofNonce(mockCtx);
@@ -166,4 +166,3 @@ describe('Confidential Product Warranty Verification (CPWV) � Midnight ZK Cont
   });
 
 });
-
