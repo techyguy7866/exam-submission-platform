@@ -121,7 +121,7 @@ export default function AdminPage() {
             🔑 Panel 1 — setManufacturerCommitment(Uint&lt;32&gt;)
           </div>
           <p style={{ fontSize: "0.83rem", color: "#94a3b8", marginBottom: "1rem" }}>
-            Anchors the manufacturer's public commitment on-chain and sets the minimum active warranty days requirement for valid claims.
+            Anchors the manufacturer's public commitment on-chain and sets the minimum active submission score requirement for valid claims.
           </p>
           <form onSubmit={handleSetManufacturer} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div>
@@ -176,7 +176,7 @@ export default function AdminPage() {
             🔄 Panel 3 — resetProduct(Bytes&lt;32&gt;, Uint&lt;32&gt;)
           </div>
           <p style={{ fontSize: "0.83rem", color: "#94a3b8", marginBottom: "1rem" }}>
-            Update the active product model ID and adjust minimum active warranty days requirement for new model releases.
+            Update the active product model ID and adjust minimum active submission score requirement for new model releases.
           </p>
           <form onSubmit={handleReset} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div>
